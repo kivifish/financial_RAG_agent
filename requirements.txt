@@ -1,0 +1,14 @@
+langchain
+langchain-classic
+langchain-community
+langchain-chroma
+langchain-openai
+langchain-text-splitters
+langchain-huggingface
+chromadb
+pdfplumber
+sentence-transformers
+python-dotenv
+openai>=1.0.0
+scikit-learn
+tiktoken
