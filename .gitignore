@@ -10,8 +10,9 @@ venv/
 # 向量数据库持久化文件——体积大，每个环境独立构建
 chroma_db/
 
-# 研报 PDF 文件——可能涉及版权/商业机密
-data/*.pdf
+# 研报数据文件——可能涉及版权/商业机密
+data/*
+!data/README.md
 
 # Python 缓存
 __pycache__/
