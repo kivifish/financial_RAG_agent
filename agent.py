@@ -9,15 +9,14 @@ Agent 模块 —— ReAct 模式的「思考→行动→观察→再思考」循
               ↓ 信息充足
             输出最终答案
 
-技术：LangChain create_tool_calling_agent + AgentExecutor
-基于 ReAct 思想——LLM 自主决策：分析问题→调用工具检索→观察结果→继续或回答
-DeepSeek 原生支持 tool calling，LLM 输出结构化调用指令，比文本解析更可靠
+技术：LangChain create_react_agent + AgentExecutor
+LLM 按固定文本格式输出 Thought/Action/Action Input，系统解析后执行工具
 """
 import json
 import re
-from langchain_classic.agents import create_tool_calling_agent, AgentExecutor
+from langchain_classic.agents import create_react_agent, AgentExecutor
 from langchain_classic.tools import tool
-from langchain_classic.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
 from config import (
@@ -54,20 +53,31 @@ def _install_openai_json_fix():
 _install_openai_json_fix()
 
 
-# ── Agent 系统提示词 ──────────────────────────────────────
-AGENT_SYSTEM_PROMPT = """你是一个金融研报问答助手。你可以使用 search_research_reports 工具来检索研报中的相关信息。
+# ── Agent 系统提示词（ReAct 文本格式）──────────────────
+AGENT_SYSTEM_PROMPT = """你是一个金融研报问答助手。你可以使用以下工具来检索研报中的相关信息：
 
-工作方式（ReAct 循环）：
-1. 分析用户问题，判断需要检索什么信息
-2. 调用 search_research_reports 工具检索，观察返回的结果
-3. 如果一次检索信息不足（比如需要对比多家公司、需要查不同指标），调整关键词再检索
-4. 信息充足后，基于检索结果给出最终答案
+{tools}
+
+严格按以下格式回答（关键词 Action/Action Input/Final Answer 必须用英文）：
+
+Question: 用户的问题
+Thought: 分析当前需要检索什么信息
+Action: 要使用的工具名（[{tool_names}] 之一）
+Action Input: 传给工具的查询关键词
+Observation: 工具返回的结果
+... (Thought/Action/Action Input/Observation 可重复多次)
+Thought: 信息充足，可以给出最终答案了
+Final Answer: 基于检索结果用中文给出最终答案
 
 重要规则：
+- Action 和 Action Input 关键词必须用英文，不能翻译成中文
 - 回答必须基于检索到的实际内容，绝对不要编造数据
 - 多次检索后仍找不到，直接说"根据给定研报无法回答该问题"
 - 回答时注明引用来源（文件名和页码），方便用户追溯
-- 闲聊类问题（打招呼、问能力等）直接回答即可，不需要检索"""
+- 闲聊类问题（打招呼、问能力等）直接回答即可，不需要检索
+
+Question: {input}
+{agent_scratchpad}"""
 
 
 def create_agent(vectorstore, llm=None):
@@ -110,16 +120,12 @@ def create_agent(vectorstore, llm=None):
     tools = [search_research_reports]
 
     # ── 组装 Prompt 模板 ──
-    # MessagesPlaceholder 是 agent_scratchpad 的位置——AgentExecutor 运行时
-    # 会在这里插入 LLM 之前的 Thought/Action/Observation 记录
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", AGENT_SYSTEM_PROMPT),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ])
+    # 使用字符串模板（非 ChatPromptTemplate），ReAct 格式的
+    # agent_scratchpad 是字符串变量，由 AgentExecutor 自动填充
+    prompt = PromptTemplate.from_template(AGENT_SYSTEM_PROMPT)
 
     # ── 创建 Agent + Executor ──
-    agent = create_tool_calling_agent(llm, tools, prompt)
+    agent = create_react_agent(llm, tools, prompt)
 
     executor = AgentExecutor(
         agent=agent,

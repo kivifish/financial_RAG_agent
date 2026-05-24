@@ -95,7 +95,7 @@ rag_research_helper/
 - **向量化**: TF-IDF（sklearn TfidfVectorizer，纯 Python，零网络依赖）
 - **向量数据库**: Chroma（持久化到本地）
 - **大模型**: DeepSeek API（兼容 OpenAI 接口）
-- **Agent 框架**: LangChain AgentExecutor + Tool Calling（ReAct 模式）
+- **Agent 框架**: LangChain AgentExecutor（ReAct 模式）
 - **编排框架**: LangChain
 
 ---
