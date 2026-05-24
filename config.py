@@ -30,10 +30,15 @@ CHUNK_OVERLAP = 50
 # 每次检索返回最相似的 K 个文本块（类似推荐系统中 Top-K 召回）
 K_RETRIEVALS = 4
 
+# ── Agent 配置 ────────────────────────────────────────────
+# Agent 循环最大迭代次数（防止 LLM 无限循环）
+MAX_AGENT_STEPS = 5
+# 是否在终端打印 Agent 的思考过程（面试演示时可以打开）
+AGENT_VERBOSE = True
+
 # ── Embedding 配置 ──────────────────────────────────────
-# 直接用 DeepSeek API 做 embedding，彻底避免本地 tokenizers 兼容问题（真的搞了很久！）
-# DeepSeek 兼容 OpenAI embeddings 接口
-EMBEDDING_MODEL = "deepseek-chat"  # DeepSeek embedding 模型名
+# 使用 TF-IDF（sklearn TfidfVectorizer），纯 Python 实现，零外部依赖
+# 详见 build_vectorstore.py 中的 TfidfEmbeddings 类
 
 # ── DeepSeek API 配置 ───────────────────────────────────
 # DeepSeek 兼容 OpenAI 接口格式，所以可以用 openai 库调用

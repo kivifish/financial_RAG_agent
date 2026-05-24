@@ -25,7 +25,7 @@ load_dotenv()
 
 from config import DEEPSEEK_API_KEY
 from build_vectorstore import get_vectorstore
-from qa_chain import create_qa_chain, answer_question
+from agent import create_agent, query_agent
 
 
 def check_env():
@@ -50,7 +50,7 @@ def print_welcome():
     print("=" * 60)
     print("   功能: 上传研报 PDF → 智能检索 → AI 回答")
     print("   数据: data/ 文件夹中的 PDF")
-    print("   模型: DeepSeek + sentence-transformers")
+    print("   模型: DeepSeek + TF-IDF（Agent ReAct 模式）")
     print()
     print("   💡 输入问题开始对话，输入 exit 退出")
     print("=" * 60)
@@ -72,13 +72,13 @@ def main():
         print(f"❌ 向量数据库初始化失败: {e}")
         sys.exit(1)
 
-    # ── 第 2 步：创建问答链 ──
-    # 链路：用户问题 → 检索 Top-4 文本块 → DeepSeek 回答
-    # 类比：加载训练好的 PPO agent（含 policy 网络 + 经验回放）
+    # ── 第 2 步：创建 Agent ──
+    # Agent 模式：LLM 拿到问题后自己决定检索几次、什么时候停
+    # 类比：从固定策略升级到了让 AI 自己决策
     print("\n🤖 正在连接 DeepSeek 大模型...")
     try:
-        qa_chain = create_qa_chain(vectorstore)
-        print("✅ 问答链就绪！\n")
+        agent = create_agent(vectorstore)
+        print("✅ Agent 就绪！\n")
     except Exception as e:
         print(f"❌ 创建问答链失败: {e}")
         print("   请检查: 1) 网络连接  2) API Key 是否正确  3) API 余额是否充足")
@@ -102,7 +102,7 @@ def main():
 
             # 调用问答链获取答案
             print("   ⏳ 正在检索相关资料并生成答案...\n")
-            result = answer_question(qa_chain, question)
+            result = query_agent(agent, question)
 
             # 打印回答（sanitize 防止 PDF 中的脏字符导致打印崩溃）
             print("📝 回答:")
